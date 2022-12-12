@@ -1,5 +1,11 @@
 version: '3.3'
 services:
+  db:
+    image: postgres:13.0-alpine
+    volumes:
+      - foodgram_data:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
 
   frontend:
     build:
@@ -15,3 +21,6 @@ services:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - ../frontend/build:/usr/share/nginx/html/
       - ../docs/:/usr/share/nginx/html/api/docs/
+
+volumes:
+  foodgram_data:
