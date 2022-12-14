@@ -1,9 +1,11 @@
 from rest_framework import filters, mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
-
+from django.shortcuts import get_object_or_404
 from .serializers import (RecipeSerializer, IngredientSerializer,
-                          SubscriptionSerializer)
-from recipes.models import Recipe, Ingredient, User
+                          SubscriptionSerializer, TagSerializer)
+from recipes.models import Recipe, Ingredient, User, Tag, Subscription
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -11,6 +13,43 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
+
+    # def perform_create(self, serializer):
+    #     serializer.save(author=self.request.user)
+
+    # def perform_update(self, serializer):
+    #     serializer.save(owner=self.request.user)
+
+    @action(methods=['post', 'delete'], detail=True, url_path='favorite')
+    def favorite(self, request, pk):
+        recipe = get_object_or_404(Recipe, pk=pk)
+        if request.method == 'DELETE':
+            subscription = Subscription.objects.filter(
+                author=recipe.author,
+                follower=request.user
+            )
+            subscription.delete()
+            return Response(status=status.HTTP_400_DELETED)
+
+        else:
+            recipe.update(
+                follower=request.user
+            )
+            serializer = SubscriptionSerializer(
+                recipe,
+                context={'request': request}
+            )
+            return Response(
+                serializer.data,
+                status=status.HTTP_200_OK
+            )
+
+
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    """Получение тэга, получение списка тэгов."""
+
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -21,8 +60,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = (filters.SearchFilter)
-    search_fields = ('name',)
+    # filter_backends = (filters.SearchFilter)
+    # search_fields = ('name',)
 
 
 class ListCreateDeleteViewSet(
