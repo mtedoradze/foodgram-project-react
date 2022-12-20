@@ -1,6 +1,8 @@
 from users.models import User
 from django.db import models
 
+import data
+
 INGREDIENTS_CHOICES = (
     ('Молоко', 'milk'),
     ('Яйцо', 'egg'),
@@ -26,24 +28,26 @@ class Tag(models.Model):
     slug = models.SlugField()
 
     def __str__(self):
-        return self.title
+        return str(self.name)
 
 
 class Ingredient(models.Model):
     name = models.CharField(
         verbose_name='Название ингредиента',
-        max_length=200
+        max_length=200,
+        choices=INGREDIENTS_CHOICES
     )
     measurement_unit = models.CharField(
         verbose_name='Единицы измерения',
         max_length=50
     )
     amount = models.IntegerField(
-        verbose_name='Количество'
+        verbose_name='Количество',
+        default=None
     )
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
 
 class Recipe(models.Model):
@@ -67,8 +71,7 @@ class Recipe(models.Model):
     ingredients = models.ManyToManyField(
         Ingredient,
         verbose_name='Продукты для приготовления блюда по рецепту',
-        through='RecipeIngredient',
-        choices=INGREDIENTS_CHOICES
+        through='RecipeIngredient'
     )
     tags = models.ManyToManyField(
         Tag,
@@ -91,8 +94,9 @@ class Recipe(models.Model):
         related_name='shopping_cart_recipes',
         through='ShoppingCartRecipe'
     )
-    # is_favorited = models.BooleanField()
-    # is_in_shopping_cart = models.BooleanField()
+
+    def __str__(self) -> str:
+        return str(self.name)
 
 
 class RecipeIngredient(models.Model):
@@ -125,7 +129,7 @@ class FavoriteRecipe(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
 
     def __str__(self) -> str:
-        return self.recipe
+        return str(self.recipe)
 
 
 class ShoppingCartRecipe(models.Model):
@@ -138,7 +142,7 @@ class ShoppingCartRecipe(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
 
     def __str__(self) -> str:
-        return self.recipe
+        return str(self.recipe)
 
 
 class Subscription(models.Model):
@@ -157,20 +161,4 @@ class Subscription(models.Model):
     )
 
     def __str__(self) -> str:
-        return self.author
-
-
-# class ShoppingCart(models.Model):
-#     user = models.ForeignKey(
-#         User,
-#         verbose_name='Пользователь',
-#         related_name='shopping_cart',
-#         on_delete=models.CASCADE
-#     )
-#     ingredients = models.ForeignKey(
-#         Ingredient,
-#         verbose_name='Ингредиенты',
-#         related_name='shopping_cart',
-#         on_delete=models.SET_NULL,
-#         null=True
-#     )
+        return f'{self.user} подписан на {self.author}'

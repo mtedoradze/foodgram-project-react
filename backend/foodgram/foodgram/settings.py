@@ -1,3 +1,4 @@
+from datetime import timedelta
 import os
 
 from dotenv import load_dotenv
@@ -12,6 +13,8 @@ DEBUG = os.getenv('DEBUG', default=False)
 
 ALLOWED_HOSTS = ['*']
 
+POSTS_PER_PAGE = 6
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -19,8 +22,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_filters',
     'rest_framework',
     'rest_framework.authtoken',
+    'djoser',
     'recipes.apps.RecipesConfig',
     'users.apps.UsersConfig',
     'api.apps.ApiConfig'
@@ -59,25 +64,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'foodgram.wsgi.application'
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    # }
     'default': {
-        'ENGINE': str(os.getenv('DB_ENGINE', 'django.db.backends.postgresql')),
-        'NAME': str(os.getenv('DB_NAME', 'postgres')),
-        'USER': str(os.getenv('POSTGRES_USER', 'posetgres_user')),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'postgres_password'),
-        'HOST': str(os.getenv('DB_HOST', 'db_host')),
-        'PORT': os.getenv('DB_PORT', 5432)
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
     # 'default': {
-    #     'ENGINE': 'django.db.backends.postgresql',
-    #     'NAME': 'foodgram',
-    #     'USER': 'foodgram',
-    #     'PASSWORD': '!)ghfgjhf!lgh_#',
-    #     'HOST': '127.0.0.1',
-    #     'PORT': '5432'
+    #     'ENGINE': str(os.getenv('DB_ENGINE', 'django.db.backends.postgresql')),
+    #     'NAME': str(os.getenv('DB_NAME', 'postgres')),
+    #     'USER': str(os.getenv('POSTGRES_USER', 'posetgres_user')),
+    #     'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'postgres_password'),
+    #     'HOST': str(os.getenv('DB_HOST', 'db_host')),
+    #     'PORT': os.getenv('DB_PORT', 5432)
     # }
 }
 
@@ -100,12 +97,20 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
-
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-    ]
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'api.pagination.StandardResultsSetPagination',
+    'PAGE_SIZE': POSTS_PER_PAGE,
+}
+
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+    'SERIALIZERS': {
+        'user_create': 'users.serializers.CustomUserCreateSerializer'
+    },
 }
 
 LANGUAGE_CODE = 'en-us'

@@ -3,9 +3,9 @@ from rest_framework import routers
 from rest_framework.authtoken import views
 
 from .views import (
-    RecipeViewSet, IngredientViewSet, SubscriptionViewSet, TagViewSet
+    RecipeViewSet, IngredientViewSet, TagViewSet
 )
-from users.views import UserViewSet
+from users.views import CustomUserSubscriptionViewSet
 
 app_name = 'api'
 
@@ -13,11 +13,9 @@ router = routers.DefaultRouter()
 router.register(r'recipes', RecipeViewSet)
 router.register(r'ingredients', IngredientViewSet)
 router.register(r'tags', TagViewSet)
-# router.register(r'users/subscriptions', SubscriptionViewSet, basename='subscripitons')
-router.register('users', UserViewSet, basename='users')
+router.register('users', CustomUserSubscriptionViewSet, basename='users')
 
 urlpatterns = [
-    path('v1/api-token-auth/', views.obtain_auth_token),
-    path('v1/api-auth/', include('rest_framework.urls')),
-    path('v1/', include(router.urls)),
+    path('auth/', include('djoser.urls.authtoken')),
+    path('', include(router.urls)),
 ]
