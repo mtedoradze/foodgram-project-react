@@ -6,6 +6,7 @@ from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from .filters import RecipeFilter
 from .pagination import StandardResultsSetPagination
 from .permissions import RecipeAuthorOrReadOnlyPermission
 from .serializers import (FavoriteRecipeSerializer, IngredientSerializer,
@@ -27,20 +28,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
         filters.SearchFilter,
         filters.OrderingFilter
     ]
-    filterset_fields = (
-        'tags__slug',
-        # 'is_favorited',
-        # 'is_in_shopping_cart',
-        'author__id'
-    )
+    filter_class = RecipeFilter
     search_fields = ('name',)
-    ordering = ('-id',)
     pagination_class = StandardResultsSetPagination
 
     def get_serializer_class(self):
         """
-        Метод для определения разных сериализаторов для разных методов запроса.
+        Определение разных сериализаторов для разных методов запроса.
         """
+        
         return (
             CreateRecipeSerializer if self.request.method in ['POST', 'PATCH']
             else RecipeSerializer
@@ -53,24 +49,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return (permissions.IsAuthenticated(),)
 
         return (RecipeAuthorOrReadOnlyPermission(),)
-
-    # def filter_queryset(self, queryset):
-    #     if self.request.method in ['POST', 'PATCH']:
-    #         return Recipe.objects.all()
-    #     filter_backends = [
-    #         DjangoFilterBackend,
-    #         filters.SearchFilter,
-    #         filters.OrderingFilter
-    #     ]
-
-    #     for backend in list(filter_backends):
-    #         queryset = backend().filter_queryset(
-    #             self.request,
-    #             queryset,
-    #             view=self
-    #         )
-
-    #     return queryset
 
     @action(methods=['post', 'delete'], detail=True)
     def favorite(self, request, pk):
@@ -143,7 +121,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(methods=['get', ], detail=False)
     def get_shopping_cart(self, request):
-        """Получить список с добавленными рецептами."""
+        """Получить список с добавленными в список покупок рецептами."""
 
         shopping_cart = Recipe.objects.filter(
             shoppingcartrecipe__user=request.user)

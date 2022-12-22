@@ -3,6 +3,7 @@ import webcolors
 
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
+from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from foodgram import settings
 from recipes.models import (Recipe, Ingredient, RecipeIngredient,
@@ -35,11 +36,11 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-    """Сериализатор для ингредиентов."""
+    """Сериализатор для просмотра списка ингредиентов в базе."""
 
     class Meta:
         model = Ingredient
-        fields = ('id', 'name', 'measurement_unit', 'amount')
+        fields = ('id', 'name', 'measurement_unit')
 
 
 class Base64ImageField(serializers.ImageField):
@@ -79,21 +80,47 @@ class TagRecipeSerializer(serializers.ModelSerializer):
         fields = ('id', )
 
 
-class IngredientRecipeSerializer(serializers.ModelSerializer):
+class IngredientRecipeCreateSerializer(serializers.ModelSerializer):
     """Сериализатор для вложенного поля ingredients при создании рецепта."""
-    id = serializers.ChoiceField(
-        choices=Ingredient.objects.values_list('id', flat=True))
+
+    id = serializers.PrimaryKeyRelatedField(
+        queryset=Ingredient.objects.all()
+    )
 
     class Meta:
-        model = Ingredient
+        model = RecipeIngredient
         fields = ('id', 'amount')
+
+
+class IngredientRecipeSerializer(serializers.ModelSerializer):
+    """Сериализатор для ингредиента в рецепте."""
+
+    id = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+    measurement_unit = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RecipeIngredient
+        fields = ('id', 'name', 'measurement_unit', 'amount')
+
+    def get_id(self, obj):
+        return obj.ingredient.id
+
+    def get_name(self, obj):
+        return obj.ingredient.name
+
+    def get_measurement_unit(self, obj):
+        return obj.ingredient.measurement_unit
 
 
 class RecipeSerializer(serializers.ModelSerializer):
     """Общий сериализатор для рецептов."""
 
     image = Base64ImageField()
-    ingredients = IngredientSerializer(many=True)
+    ingredients = IngredientRecipeSerializer(
+        many=True,
+        source='recipeingredient_set'
+    )
     tags = TagSerializer(many=True)
     author = RecipeAuthorSerializer(
         read_only=True,
@@ -133,8 +160,14 @@ class RecipeSerializer(serializers.ModelSerializer):
 class CreateRecipeSerializer(RecipeSerializer):
     """Cериализатор для создания рецепта."""
 
-    ingredients = IngredientRecipeSerializer(many=True)
-    tags = TagRecipeSerializer(many=True)
+    ingredients = IngredientRecipeCreateSerializer(
+        many=True,
+        source='recipeingredient_set'
+    )
+    tags = serializers.PrimaryKeyRelatedField(
+        queryset=Tag.objects.all(),
+        many=True
+    )
 
     class Meta:
         model = Recipe
@@ -148,10 +181,17 @@ class CreateRecipeSerializer(RecipeSerializer):
         )
 
     def validate(self, data):
+        """
+        Валидация поля cooking_time, 
+        """
         if data.get('cooking_time') < 1:
             raise serializers.ValidationError(
                 "Время приготовления должно быть больше 1"
             )
+        try:
+            super().validate(data)
+        except IntegrityError as error:
+            raise serializers.ValidationError(error)
         return data
 
     def create(self, validated_data):
@@ -160,33 +200,23 @@ class CreateRecipeSerializer(RecipeSerializer):
         Создание объекта модели Recipe с вложенными сериализаторами.
         """
 
-        ingredients = validated_data.pop('ingredients')
+        ingredients = validated_data.pop('recipeingredient_set')
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(
             **validated_data,
             author=self.context.get('request').user
         )
         for ingredient in ingredients:
-            ingredient_from_base = get_object_or_404(
-                Ingredient,
-                id=ingredient.get('id')
-                )
-            amount = ingredient.get('amount')
             RecipeIngredient.objects.create(
-                ingredient=ingredient_from_base,
-                recipe=recipe
+                ingredient=ingredient.get('id'),
+                recipe=recipe,
+                amount=ingredient.get('amount')
             )
-            Ingredient.objects.filter(
-                recipeingredient__ingredient=ingredient_from_base
-                ).update(amount=amount)
 
         for tag in tags:
-            tag_from_base = get_object_or_404(
-                Tag,
-                id=tag.get('id')
-            )
+            tag, status = Tag.objects.get_or_create(id=tag.id)
             RecipeTag.objects.create(
-                tag=tag_from_base,
+                tag=tag,
                 recipe=recipe
             )
 
@@ -197,34 +227,26 @@ class CreateRecipeSerializer(RecipeSerializer):
         Переопределение метода update.
         Изменение рецепта с вложенными сериализаторами.
         """
-        ingredients = validated_data.pop('ingredients')
+
+        ingredients = validated_data.pop('recipeingredient_set')
         tags = validated_data.pop('tags')
-        recipe = instance.partial_update(
+        print(tags)
+        recipe = Recipe(
             **validated_data,
             author=self.context.get('request').user
         )
+        recipe.save()
 
         for ingredient in ingredients:
-            ingredient_from_base = get_object_or_404(
-                Ingredient,
-                id=ingredient.get('id')
-                )
-            amount = ingredient.get('amount')
             RecipeIngredient.objects.get_or_create(
-                ingredient=ingredient_from_base,
-                recipe=recipe
+                ingredient=ingredient.get('id'),
+                recipe=recipe,
+                amount=ingredient.get('amount')
             )
-            Ingredient.objects.filter(
-                recipeingredient__ingredient=ingredient_from_base
-                ).update(amount=amount)
 
         for tag in tags:
-            tag_from_base = get_object_or_404(
-                Tag,
-                id=tag.get('id')
-            )
-            RecipeTag.objects.create(
-                tag=tag_from_base,
+            RecipeTag.objects.get_or_create(
+                tag=tag,
                 recipe=recipe
             )
 

@@ -21,7 +21,7 @@ importlib-metadata==1.7.0
 iniconfig==1.1.1
 itypes==1.2.0
 Jinja2==3.1.2
-Markdown==3.4.1
+Markdown
 MarkupSafe==2.1.1
 mccabe==0.7.0
 oauthlib==3.2.2
@@ -48,4 +48,5 @@ tomli==2.0.1
 typing_extensions==4.4.0
 uritemplate==4.1.1
 urllib3==1.26.13
+webcolors
 zipp==3.11.0

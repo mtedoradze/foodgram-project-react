@@ -34,7 +34,7 @@ class CustomUserSubscriptionViewSet(UserViewSet):
         """Определение условий для применения пермишенов."""
 
         if 'subscriptions' in self.request.path:
-            return (SubscriptionOwnerOrReadOnlyPermission,)
+            return (SubscriptionOwnerOrReadOnlyPermission(),)
 
         return super().get_permissions()
 

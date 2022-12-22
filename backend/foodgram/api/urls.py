@@ -10,7 +10,7 @@ from users.views import CustomUserSubscriptionViewSet
 app_name = 'api'
 
 router = routers.DefaultRouter()
-router.register(r'recipes', RecipeViewSet)
+router.register(r'recipes', RecipeViewSet, basename='recipes')
 router.register(r'ingredients', IngredientViewSet)
 router.register(r'tags', TagViewSet)
 router.register('users', CustomUserSubscriptionViewSet, basename='users')
