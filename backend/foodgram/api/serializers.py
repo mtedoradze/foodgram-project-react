@@ -1,16 +1,25 @@
+import logging
 import base64
 import webcolors
-
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
+from rest_framework import serializers
+
 from foodgram import settings
 from recipes.models import (Recipe, Ingredient, RecipeIngredient,
                             Tag, RecipeTag)
 from users.models import User
 from users.serializers import UserSerializer
-from rest_framework import serializers
+from .pagination import POSTS_PER_PAGE
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s, %(message)s, %(name)s'
+    )
+
+logger = logging.getLogger(__name__)
 
 
 class Hex2NameColor(serializers.Field):
@@ -70,14 +79,14 @@ class RecipeAuthorSerializer(UserSerializer):
         )
 
 
-class TagRecipeSerializer(serializers.ModelSerializer):
-    """Сериализатор для вложенного поля tags при создании рецепта."""
-    id = serializers.ChoiceField(
-        choices=Tag.objects.values_list('id', flat=True))
+# class TagRecipeSerializer(serializers.ModelSerializer):
+#     """Сериализатор для вложенного поля tags при создании рецепта."""
+#     id = serializers.ChoiceField(
+#         choices=Tag.objects.values_list('id', flat=True))
 
-    class Meta:
-        model = Tag
-        fields = ('id', )
+#     class Meta:
+#         model = Tag
+#         fields = ('id', )
 
 
 class IngredientRecipeCreateSerializer(serializers.ModelSerializer):
@@ -148,13 +157,15 @@ class RecipeSerializer(serializers.ModelSerializer):
         """Метод для вычисления поля is_favorited."""
 
         return obj.favorited_by.filter(
-            favoriterecipe__user=self.context.get('request').user).exists()
+            favoriterecipe__user__id=self.context.get('request').user.id
+            ).exists()
 
     def get_is_in_shopping_cart(self, obj):
         """Метод для вычисления поля is_in_shopping_cart."""
 
         return obj.in_shopping_cart_of.filter(
-            shoppingcartrecipe__user=self.context.get('request').user).exists()
+            shoppingcartrecipe__user__id=self.context.get('request').user.id
+            ).exists()
 
 
 class CreateRecipeSerializer(RecipeSerializer):
@@ -180,20 +191,6 @@ class CreateRecipeSerializer(RecipeSerializer):
             'cooking_time'
         )
 
-    def validate(self, data):
-        """
-        Валидация поля cooking_time, 
-        """
-        if data.get('cooking_time') < 1:
-            raise serializers.ValidationError(
-                "Время приготовления должно быть больше 1"
-            )
-        try:
-            super().validate(data)
-        except IntegrityError as error:
-            raise serializers.ValidationError(error)
-        return data
-
     def create(self, validated_data):
         """
         Переопределение метода create.
@@ -214,7 +211,6 @@ class CreateRecipeSerializer(RecipeSerializer):
             )
 
         for tag in tags:
-            tag, status = Tag.objects.get_or_create(id=tag.id)
             RecipeTag.objects.create(
                 tag=tag,
                 recipe=recipe
@@ -227,43 +223,46 @@ class CreateRecipeSerializer(RecipeSerializer):
         Переопределение метода update.
         Изменение рецепта с вложенными сериализаторами.
         """
-
         ingredients = validated_data.pop('recipeingredient_set')
         tags = validated_data.pop('tags')
-        print(tags)
-        recipe = Recipe(
-            **validated_data,
-            author=self.context.get('request').user
-        )
-        recipe.save()
 
+        instance.name = validated_data.get('name', instance.name)
+        instance.image = validated_data.get('image', instance.image)
+        instance.text = validated_data.get('text', instance.text)
+        instance.save()
+        
         for ingredient in ingredients:
-            RecipeIngredient.objects.get_or_create(
+            ingredient_item, status = RecipeIngredient.objects.get_or_create(
                 ingredient=ingredient.get('id'),
-                recipe=recipe,
-                amount=ingredient.get('amount')
+                recipe=instance
             )
+            ingredient_item.amount = ingredient.get(
+                'amount',
+                ingredient_item.amount
+            )
+            ingredient_item.save()
 
+        new_recipe_tags = []
         for tag in tags:
-            RecipeTag.objects.get_or_create(
+            new_recipe_tag, status = RecipeTag.objects.get_or_create(
                 tag=tag,
-                recipe=recipe
+                recipe=instance
             )
+            new_recipe_tags.append(new_recipe_tag)
 
-        return recipe
+        all_recipe_tags = RecipeTag.objects.filter(recipe=instance)
 
+        for tag in all_recipe_tags:
+            if tag not in new_recipe_tags:
+                tag.delete()
 
-# class OrderedRecipeSerializer(serializers.ListSerializer):
-#     def to_representation(self, data):
-#         data = data.order_by('-id')
-#         return super().to_representation(data)
+        return instance
 
 
 class FavoriteRecipeSerializer(RecipeSerializer):
     """Сериализатор для избранных рецептов."""
 
     class Meta:
-        # list_serializer_class = OrderedRecipeSerializer
         model = Recipe
         fields = (
             'id',
@@ -276,7 +275,6 @@ class FavoriteRecipeSerializer(RecipeSerializer):
 class SubscriptionSerializer(UserSerializer):
     """Сериализатор для подписок на авторов рецептов."""
 
-    # recipes = FavoriteRecipeSerializer(many=True, read_only=True)
     recipes = serializers.SerializerMethodField('paginated_recipes')
     recipes_count = serializers.SerializerMethodField()
 
@@ -294,9 +292,11 @@ class SubscriptionSerializer(UserSerializer):
         )
 
     def paginated_recipes(self, obj):
+        """Метод для ограничения количества объектов внутри поля recipes."""
+
         page_size = self.context.get(
             'request').query_params.get(
-            'recipes_limit') or settings.POSTS_PER_PAGE
+            'recipes_limit') or POSTS_PER_PAGE
         paginator = Paginator(obj.recipes.all(), page_size)
         page = self.context['request'].query_params.get('page') or 1
         recipes = paginator.page(page)
@@ -319,4 +319,6 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
         fields = ('name', 'measurement_unit', 'total_amount')
 
     def get_total_amount(self, obj):
+        """Поле для общего количества ингредиентов в списке покупок."""
+
         return obj.total_amount

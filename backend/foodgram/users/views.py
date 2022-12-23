@@ -8,7 +8,7 @@ from .models import User
 from .serializers import UserSerializer, CustomUserCreateSerializer
 from api.serializers import SubscriptionSerializer
 from api.pagination import StandardResultsSetPagination
-from api.permissions import SubscriptionOwnerOrReadOnlyPermission
+from api.permissions import SubscriptionOwnerPermission
 from recipes.models import Subscription
 
 
@@ -20,34 +20,34 @@ class CustomUserSubscriptionViewSet(UserViewSet):
     """
 
     serializer_class = UserSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     queryset = User.objects.all()
     pagination_class = StandardResultsSetPagination
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
-    ordering_fields = ('name', )
-
-    def get_queryset(self):
-        """Получения всех пользователей."""
-
-        return User.objects.all()
 
     def get_permissions(self):
         """Определение условий для применения пермишенов."""
 
-        if 'subscriptions' in self.request.path:
-            return (SubscriptionOwnerOrReadOnlyPermission(),)
+        return (
+            (SubscriptionOwnerPermission(), ) if 'subscriptions'
+            in self.request.path else super().get_permissions()
+        )
 
-        return super().get_permissions()
+    def get_serializer_class(self):
+        """
+        Определение разных сериализаторов для разных методов запроса.
+        """
 
-    def perform_create(self, serializer):
-        """Получение кастомных полей сериализатора."""
-
-        serializer = CustomUserCreateSerializer
-        super().perform_create(self, serializer)
+        return (
+            CustomUserCreateSerializer if self.action == 'create'
+            else super().get_serializer_class()
+        )
 
     @action(["get"], detail=False)
     def me(self, request):
         """Получение текущего пользователя."""
 
+        if request.user.is_anonymous:
+            return Response('Вам необходимо зарегистрироваться.')
         serializer = UserSerializer(
             request.user,
             context={'request': request}
@@ -57,22 +57,9 @@ class CustomUserSubscriptionViewSet(UserViewSet):
             status=status.HTTP_200_OK
         )
 
-    def retrieve(self, request, id):
-        """Получение пользователя по id."""
-
-        user = get_object_or_404(User, id=id)
-        serializer = UserSerializer(
-            user,
-            context={'request': request}
-        )
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
-
     @action(methods=['post', 'delete'], detail=True)
     def subscribe(self, request, id):
-        """Подписка ("POST") и отписка ("DELETE") от авторов рецептов."""
+        """Подписка (POST) и отписка (DELETE) от авторов рецептов."""
 
         author = get_object_or_404(User, id=id)
         subscription = Subscription.objects.filter(
@@ -108,7 +95,9 @@ class CustomUserSubscriptionViewSet(UserViewSet):
     def subscriptions(self, request):
         """Получение списка подписок текущего пользователя."""
 
-        subscriptions = User.objects.filter(subscriptions__user=request.user)
+        subscriptions = User.objects.filter(
+            subscriptions__user__id=request.user.id
+        )
         serializer = SubscriptionSerializer(
             subscriptions,
             many=True,

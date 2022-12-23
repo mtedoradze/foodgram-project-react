@@ -1,8 +1,12 @@
 from rest_framework import permissions
-from users.models import User
 
 
 class RecipeAuthorOrReadOnlyPermission(permissions.BasePermission):
+    """
+    Разрешение на полный доступ к рецепту для автора.
+    Остальным пользователям - только просмотр.
+    """
+
     def has_permission(self, request, view):
         return (
             request.method in permissions.SAFE_METHODS
@@ -11,20 +15,24 @@ class RecipeAuthorOrReadOnlyPermission(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         return (
-            obj.author.id == request.user.id
+            request.method in permissions.SAFE_METHODS
+            or obj.author == request.user
             or request.user.is_staff
         )
 
 
-class SubscriptionOwnerOrReadOnlyPermission(permissions.BasePermission):
+class SubscriptionOwnerPermission(permissions.BasePermission):
+    """
+    Разрешение на управление подписками для владельца.
+    """
+
     def has_permission(self, request, view):
         return (
-            request.method in permissions.SAFE_METHODS
-            or request.user.is_authenticated
+            request.user.is_authenticated
         )
 
     def has_object_permission(self, request, view, obj):
         return (
-            obj.subscriptions__user__id == request.user.id
+            obj.subscriptions__user == request.user
             or request.user.is_staff
         )

@@ -1,5 +1,7 @@
-from users.models import User
+from django.core.validators import MinValueValidator
 from django.db import models
+
+from users.models import User
 
 
 class Tag(models.Model):
@@ -52,7 +54,7 @@ class Recipe(models.Model):
         related_name='recipes'
     )
     text = models.TextField(
-        verbose_name='Текстовое описание',
+        verbose_name='Описание',
         unique=True
     )
     image = models.ImageField(
@@ -70,7 +72,8 @@ class Recipe(models.Model):
         through='RecipeTag'
     )
     cooking_time = models.IntegerField(
-        verbose_name='Время приготовления'
+        verbose_name='Время приготовления',
+        validators=[MinValueValidator(1), ]
     )
     favorited_by = models.ManyToManyField(
         User,
@@ -93,16 +96,6 @@ class Recipe(models.Model):
         ordering = ('-pub_date', )
         verbose_name = "Рецепт"
         verbose_name_plural = "Рецепты"
-        # constraints = [
-        #     models.UniqueConstraint(
-        #         fields=['text', ],
-        #         name='unique_recipe_text'
-        #     ),
-        #     models.UniqueConstraint(
-        #         fields=['name', ],
-        #         name='unique_recipe_name'
-        #     )
-        # ]
 
     def __str__(self) -> str:
         return str(self.name)
@@ -125,6 +118,7 @@ class RecipeIngredient(models.Model):
                 name='unique_ingredient_recipe'
             )
         ]
+        ordering = ('-recipe__pub_date', )
 
     def __str__(self):
         return f'{self.ingredient} в рецепте {self.recipe}'
@@ -143,6 +137,7 @@ class RecipeTag(models.Model):
                 name='unique_tag_recipe'
             )
         ]
+        ordering = ('-recipe__pub_date', )
 
     def __str__(self):
         return f'{self.recipe} с тэгом {self.tag}'
@@ -164,6 +159,7 @@ class FavoriteRecipe(models.Model):
                 name='unique_favorite_recipe'
             )
         ]
+        ordering = ('-recipe__pub_date', )
 
     def __str__(self) -> str:
         return f'{self.recipe} в избранном у {self.user}'
@@ -185,6 +181,7 @@ class ShoppingCartRecipe(models.Model):
                 name='unique_recipe_in_cart'
             )
         ]
+        ordering = ('-recipe__pub_date', )
 
     def __str__(self) -> str:
         return f'{self.recipe} в списке покупок у {self.user}'

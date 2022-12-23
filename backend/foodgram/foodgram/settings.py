@@ -13,8 +13,6 @@ DEBUG = os.getenv('DEBUG', default=False)
 
 ALLOWED_HOSTS = ['*']
 
-POSTS_PER_PAGE = 6
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -102,8 +100,6 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'api.pagination.StandardResultsSetPagination',
-    'PAGE_SIZE': POSTS_PER_PAGE,
 }
 
 DJOSER = {
