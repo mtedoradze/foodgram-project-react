@@ -3,13 +3,12 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from foodgram import settings
 from recipes.models import (FavoriteRecipe, Ingredient, Recipe,
                             ShoppingCartRecipe, Tag)
 from rest_framework import filters, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-
-from foodgram import settings
 
 from .filters import RecipeFilter
 from .pagination import StandardResultsSetPagination

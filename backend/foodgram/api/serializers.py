@@ -4,12 +4,11 @@ import webcolors
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.db import transaction
+from foodgram import settings
 from recipes.models import Ingredient, Recipe, RecipeIngredient, RecipeTag, Tag
 from rest_framework import serializers
 from users.models import User
 from users.serializers import UserSerializer
-
-from foodgram import settings
 
 from .pagination import POSTS_PER_PAGE
 
