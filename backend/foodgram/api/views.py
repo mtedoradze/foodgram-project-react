@@ -1,4 +1,3 @@
-import logging
 from django.db import IntegrityError
 from django.db.models import Sum
 from django.http import HttpResponse
@@ -14,15 +13,11 @@ from .permissions import RecipeAuthorOrReadOnlyPermission
 from .serializers import (FavoriteRecipeSerializer, IngredientSerializer,
                           TagSerializer, RecipeSerializer,
                           CreateRecipeSerializer, ShoppingCartSerializer)
+from foodgram import settings
 from recipes.models import (Recipe, Ingredient, Tag, FavoriteRecipe,
                             ShoppingCartRecipe)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s, %(message)s, %(name)s'
-    )
-
-logger = logging.getLogger(__name__)
+logger = settings.logging.getLogger(__name__)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -55,8 +50,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Определение условий для применения пермишенов."""
 
         return (
-            (permissions.IsAuthenticated(), ) if
-            sum(x in self.request.path for x in ['shopping_cart', 'favorite'])
+            (permissions.IsAuthenticated(), ) if (
+                'shopping_cart' in self.request.path or
+                'favorite' in self.request.path
+            )
             else (RecipeAuthorOrReadOnlyPermission(), )
         )
 
@@ -96,21 +93,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_200_OK
             )
 
-    # @action(methods=['get'], detail=False)
-    # def favorites(self, request):
-    #     """Получение списка избранных рецептов текущего пользователя."""
-
-    #     favorites = Recipe.objects.filter(favoriterecipe__user=request.user)
-    #     serializer = FavoriteRecipeSerializer(
-    #         favorites,
-    #         many=True,
-    #         context={'request': request}
-    #     )
-    #     return Response(
-    #         serializer.data,
-    #         status=status.HTTP_200_OK
-    #     )
-
     @action(methods=['post', 'delete'], detail=True)
     def shopping_cart(self, request, pk):
         """Добавление рецепта в список покупок/удаление из списка покупок."""
@@ -143,19 +125,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 serializer.data,
                 status=status.HTTP_200_OK
             )
-
-    # @action(methods=['get', ], detail=False)
-    # def get_shopping_cart(self, request):
-    #     """Получить список с добавленными в список покупок рецептами."""
-
-    #     shopping_cart = Recipe.objects.filter(
-    #         shoppingcartrecipe__user=request.user)
-    #     serializer = RecipeSerializer(
-    #         shopping_cart,
-    #         many=True,
-    #         context={'request': request}
-    #     )
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(methods=['get', ], detail=False)
     def download_shopping_cart(self, request):

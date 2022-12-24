@@ -35,8 +35,10 @@ class RecipeFilter(FilterSet):
         favorited_by.
         """
 
-        return qs.filter(favorited_by=self.request.user.id) if value \
+        return (
+            qs.filter(favorited_by=self.request.user.id) if value
             else qs.exclude(favorited_by=self.request.user.id)
+        )
 
     def filter_is_in_shopping_cart(self, qs, name, value):
         """
@@ -44,5 +46,7 @@ class RecipeFilter(FilterSet):
         in_shopping_cart_of.
         """
 
-        return qs.filter(in_shopping_cart_of=self.request.user.id) if value \
+        return (
+            qs.filter(in_shopping_cart_of=self.request.user.id) if value
             else qs.exclude(in_shopping_cart_of=self.request.user.id)
+        )

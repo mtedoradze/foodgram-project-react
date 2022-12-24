@@ -130,3 +130,7 @@ dmypy.json
 
 # .idea
 .idea
+
+# Data
+foodgram_data
+static_value

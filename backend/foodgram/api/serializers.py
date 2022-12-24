@@ -1,9 +1,8 @@
-import logging
 import base64
 import webcolors
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
-from django.db import IntegrityError
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
@@ -14,12 +13,7 @@ from users.models import User
 from users.serializers import UserSerializer
 from .pagination import POSTS_PER_PAGE
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s, %(message)s, %(name)s'
-    )
-
-logger = logging.getLogger(__name__)
+logger = settings.logging.getLogger(__name__)
 
 
 class Hex2NameColor(serializers.Field):
@@ -191,6 +185,7 @@ class CreateRecipeSerializer(RecipeSerializer):
             'cooking_time'
         )
 
+    @transaction.atomic
     def create(self, validated_data):
         """
         Переопределение метода create.
@@ -218,6 +213,7 @@ class CreateRecipeSerializer(RecipeSerializer):
 
         return recipe
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         """
         Переопределение метода update.
@@ -230,7 +226,7 @@ class CreateRecipeSerializer(RecipeSerializer):
         instance.image = validated_data.get('image', instance.image)
         instance.text = validated_data.get('text', instance.text)
         instance.save()
-        
+
         for ingredient in ingredients:
             ingredient_item, status = RecipeIngredient.objects.get_or_create(
                 ingredient=ingredient.get('id'),
@@ -307,7 +303,7 @@ class SubscriptionSerializer(UserSerializer):
     def get_recipes_count(self, obj):
         """Метод для вычисления поля recipes_count."""
 
-        return obj.recipes.count()
+        return obj.recipes_count()
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):

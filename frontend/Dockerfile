@@ -5,4 +5,4 @@ COPY package*.json ./
 RUN npm install
 COPY . ./
 RUN npm run build
-CMD ["gunicorn", ".wsgi:application", "--bind", "0:8000"]
+CMD cp -r build result_build

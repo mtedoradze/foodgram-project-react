@@ -3,6 +3,7 @@ from djoser.views import UserViewSet
 from rest_framework import filters, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from .models import User
 from .serializers import UserSerializer, CustomUserCreateSerializer
@@ -98,6 +99,8 @@ class CustomUserSubscriptionViewSet(UserViewSet):
         subscriptions = User.objects.filter(
             subscriptions__user__id=request.user.id
         )
+        subscriptions.recipes_count = subscriptions.select_related(
+            'author').annotate(recipes_count=Sum('recipes'))
         serializer = SubscriptionSerializer(
             subscriptions,
             many=True,

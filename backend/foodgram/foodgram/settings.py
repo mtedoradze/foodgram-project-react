@@ -1,4 +1,4 @@
-from datetime import timedelta
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -6,6 +6,11 @@ from dotenv import load_dotenv
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s, %(message)s, %(name)s'
+    )
 
 SECRET_KEY = str(os.getenv('SECRET_KEY'))
 
@@ -61,20 +66,24 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'foodgram.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+if DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
     }
-    # 'default': {
-    #     'ENGINE': str(os.getenv('DB_ENGINE', 'django.db.backends.postgresql')),
-    #     'NAME': str(os.getenv('DB_NAME', 'postgres')),
-    #     'USER': str(os.getenv('POSTGRES_USER', 'posetgres_user')),
-    #     'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'postgres_password'),
-    #     'HOST': str(os.getenv('DB_HOST', 'db_host')),
-    #     'PORT': os.getenv('DB_PORT', 5432)
-    # }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': str(os.getenv('DB_ENGINE', 'django.db.backends.postgresql')),
+            'NAME': str(os.getenv('DB_NAME', 'postgres')),
+            'USER': str(os.getenv('POSTGRES_USER', 'posetgres_user')),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'postgres_password'),
+            'HOST': str(os.getenv('DB_HOST', 'db_host')),
+            'PORT': os.getenv('DB_PORT', 5432)
+        }
+    }
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -119,11 +128,11 @@ USE_L10N = True
 
 USE_TZ = True
 
-STATIC_URL = '/static/'
+STATIC_URL = '/backend-static/'
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'backend-static')
 
-MEDIA_URL = '/media/'
+MEDIA_URL = '/backend-media/'
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'backend-media')
 # DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
