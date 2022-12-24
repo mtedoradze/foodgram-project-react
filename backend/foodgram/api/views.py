@@ -3,19 +3,20 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from recipes.models import (FavoriteRecipe, Ingredient, Recipe,
+                            ShoppingCartRecipe, Tag)
 from rest_framework import filters, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from foodgram import settings
+
 from .filters import RecipeFilter
 from .pagination import StandardResultsSetPagination
 from .permissions import RecipeAuthorOrReadOnlyPermission
-from .serializers import (FavoriteRecipeSerializer, IngredientSerializer,
-                          TagSerializer, RecipeSerializer,
-                          CreateRecipeSerializer, ShoppingCartSerializer)
-from foodgram import settings
-from recipes.models import (Recipe, Ingredient, Tag, FavoriteRecipe,
-                            ShoppingCartRecipe)
+from .serializers import (CreateRecipeSerializer, FavoriteRecipeSerializer,
+                          IngredientSerializer, RecipeSerializer,
+                          ShoppingCartSerializer, TagSerializer)
 
 logger = settings.logging.getLogger(__name__)
 
@@ -51,8 +52,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return (
             (permissions.IsAuthenticated(), ) if (
-                'shopping_cart' in self.request.path or
-                'favorite' in self.request.path
+                'shopping_cart' in self.request.path
+                or 'favorite' in self.request.path
             )
             else (RecipeAuthorOrReadOnlyPermission(), )
         )
@@ -79,19 +80,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_204_NO_CONTENT
             )
 
-        else:
-            try:
-                FavoriteRecipe.objects.create(user=request.user, recipe=recipe)
-            except IntegrityError as error:
-                return Response(f'{error}')
-            serializer = FavoriteRecipeSerializer(
-                recipe,
-                context={'request': request}
-            )
-            return Response(
-                serializer.data,
-                status=status.HTTP_200_OK
-            )
+        try:
+            FavoriteRecipe.objects.create(user=request.user, recipe=recipe)
+        except IntegrityError as error:
+            return Response(f'{error}')
+        serializer = FavoriteRecipeSerializer(
+            recipe,
+            context={'request': request}
+        )
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
 
     @action(methods=['post', 'delete'], detail=True)
     def shopping_cart(self, request, pk):
@@ -109,22 +109,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_204_NO_CONTENT
             )
 
-        else:
-            try:
-                ShoppingCartRecipe.objects.create(
-                    user=request.user,
-                    recipe=recipe
-                )
-            except IntegrityError as error:
-                return Response(f'{error}')
-            serializer = FavoriteRecipeSerializer(
-                recipe,
-                context={'request': request}
+        try:
+            ShoppingCartRecipe.objects.create(
+                user=request.user,
+                recipe=recipe
             )
-            return Response(
-                serializer.data,
-                status=status.HTTP_200_OK
-            )
+        except IntegrityError as error:
+            return Response(f'{error}')
+        serializer = FavoriteRecipeSerializer(
+            recipe,
+            context={'request': request}
+        )
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
 
     @action(methods=['get', ], detail=False)
     def download_shopping_cart(self, request):
@@ -132,8 +131,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         ingredients = Ingredient.objects.filter(
             recipeingredient__recipe__in_shopping_cart_of=request.user
-            ).annotate(total_amount=Sum(
-             'recipeingredient__amount')).order_by('name')
+        ).annotate(total_amount=Sum(
+            'recipeingredient__amount')).order_by('name')
         serializer = ShoppingCartSerializer(
             ingredients,
             many=True,
@@ -143,7 +142,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             serializer.data,
             headers={
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': 'attachment; filename="shopping_cart.pdf"',
+                'Content-Disposition': (
+                    'attachment; filename="shopping_cart.pdf"'
+                ),
             },
             status=status.HTTP_200_OK
         )

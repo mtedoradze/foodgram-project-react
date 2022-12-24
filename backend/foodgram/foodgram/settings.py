@@ -10,7 +10,7 @@ load_dotenv()
 logging.basicConfig(
     level=logging.INFO,
     format='%(levelname)s, %(message)s, %(name)s'
-    )
+)
 
 SECRET_KEY = str(os.getenv('SECRET_KEY'))
 

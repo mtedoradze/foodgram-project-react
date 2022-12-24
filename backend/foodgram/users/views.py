@@ -1,16 +1,16 @@
-from django_filters.rest_framework import DjangoFilterBackend
-from djoser.views import UserViewSet
-from rest_framework import filters, permissions, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.db.models import Sum
-from django.shortcuts import get_object_or_404
-from .models import User
-from .serializers import UserSerializer, CustomUserCreateSerializer
-from api.serializers import SubscriptionSerializer
 from api.pagination import StandardResultsSetPagination
 from api.permissions import SubscriptionOwnerPermission
+from api.serializers import SubscriptionSerializer
+from django.db.models import Sum
+from django.shortcuts import get_object_or_404
+from djoser.views import UserViewSet
 from recipes.models import Subscription
+from rest_framework import permissions, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from .models import User
+from .serializers import CustomUserCreateSerializer, UserSerializer
 
 
 class CustomUserSubscriptionViewSet(UserViewSet):
@@ -64,33 +64,32 @@ class CustomUserSubscriptionViewSet(UserViewSet):
 
         author = get_object_or_404(User, id=id)
         subscription = Subscription.objects.filter(
-                user=request.user,
-                author=author
-            )
+            user=request.user,
+            author=author
+        )
         if request.method == 'DELETE':
             subscription.delete()
             return Response(
                 f'Вы отписались от автора {author}',
                 status=status.HTTP_204_NO_CONTENT
             )
-        else:
-            if subscription.exists():
-                return Response(
-                    'Вы уже подписаны на этого автора',
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            subscription = Subscription.objects.create(
-                user=request.user,
-                author=author
-            )
-            serializer = SubscriptionSerializer(
-                subscription.author,
-                context={'request': request}
-            )
+        if subscription.exists():
             return Response(
-                serializer.data,
-                status=status.HTTP_200_OK
+                'Вы уже подписаны на этого автора',
+                status=status.HTTP_400_BAD_REQUEST
             )
+        subscription = Subscription.objects.create(
+            user=request.user,
+            author=author
+        )
+        serializer = SubscriptionSerializer(
+            subscription.author,
+            context={'request': request}
+        )
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
 
     @action(methods=['get', ], detail=False)
     def subscriptions(self, request):

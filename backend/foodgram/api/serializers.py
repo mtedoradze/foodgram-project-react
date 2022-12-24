@@ -1,16 +1,16 @@
 import base64
+
 import webcolors
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.shortcuts import get_object_or_404
+from recipes.models import Ingredient, Recipe, RecipeIngredient, RecipeTag, Tag
 from rest_framework import serializers
-
-from foodgram import settings
-from recipes.models import (Recipe, Ingredient, RecipeIngredient,
-                            Tag, RecipeTag)
 from users.models import User
 from users.serializers import UserSerializer
+
+from foodgram import settings
+
 from .pagination import POSTS_PER_PAGE
 
 logger = settings.logging.getLogger(__name__)
@@ -152,14 +152,14 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         return obj.favorited_by.filter(
             favoriterecipe__user__id=self.context.get('request').user.id
-            ).exists()
+        ).exists()
 
     def get_is_in_shopping_cart(self, obj):
         """Метод для вычисления поля is_in_shopping_cart."""
 
         return obj.in_shopping_cart_of.filter(
             shoppingcartrecipe__user__id=self.context.get('request').user.id
-            ).exists()
+        ).exists()
 
 
 class CreateRecipeSerializer(RecipeSerializer):
