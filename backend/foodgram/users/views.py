@@ -1,7 +1,7 @@
 from api.pagination import StandardResultsSetPagination
 from api.permissions import SubscriptionOwnerPermission
 from api.serializers import SubscriptionSerializer
-from django.db.models import Sum
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 from recipes.models import Subscription
@@ -63,6 +63,11 @@ class CustomUserSubscriptionViewSet(UserViewSet):
         """Подписка (POST) и отписка (DELETE) от авторов рецептов."""
 
         author = get_object_or_404(User, id=id)
+        if author.id == request.user.id:
+            return Response(
+                'Не подписывайтесь на самого себя',
+                status=status.HTTP_204_NO_CONTENT
+            )
         subscription = Subscription.objects.filter(
             user=request.user,
             author=author
@@ -82,8 +87,13 @@ class CustomUserSubscriptionViewSet(UserViewSet):
             user=request.user,
             author=author
         )
+
         serializer = SubscriptionSerializer(
-            subscription.author,
+            User.objects.filter(
+                subscriptions__author__id=author.id
+            ).annotate(recipes_count=Count('recipes__id')).get(
+                subscriptions__user__id=request.user.id
+            ),
             context={'request': request}
         )
         return Response(
@@ -97,9 +107,8 @@ class CustomUserSubscriptionViewSet(UserViewSet):
 
         subscriptions = User.objects.filter(
             subscriptions__user__id=request.user.id
-        )
-        subscriptions.recipes_count = subscriptions.select_related(
-            'author').annotate(recipes_count=Sum('recipes'))
+        ).annotate(recipes_count=Count('recipes__id'))
+
         serializer = SubscriptionSerializer(
             subscriptions,
             many=True,

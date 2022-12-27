@@ -15,7 +15,7 @@ from .pagination import StandardResultsSetPagination
 from .permissions import RecipeAuthorOrReadOnlyPermission
 from .serializers import (CreateRecipeSerializer, FavoriteRecipeSerializer,
                           IngredientSerializer, RecipeSerializer,
-                          ShoppingCartSerializer, TagSerializer)
+                          TagSerializer)
 
 logger = settings.logging.getLogger(__name__)
 
@@ -27,14 +27,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """
 
     queryset = Recipe.objects.all()
+    pagination_class = StandardResultsSetPagination
+    filterset_class = RecipeFilter
     filter_backends = [
         DjangoFilterBackend,
-        filters.SearchFilter,
-        filters.OrderingFilter
+        filters.SearchFilter
     ]
-    filter_class = RecipeFilter
-    search_fields = ('name', )
-    pagination_class = StandardResultsSetPagination
+    search_fields = ('name', 'ingredients__name')
 
     def get_serializer_class(self):
         """
@@ -97,6 +96,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Добавление рецепта в список покупок/удаление из списка покупок."""
 
         recipe = get_object_or_404(Recipe, pk=pk)
+        print(recipe._meta.get_fields())
         recipe_in_shopping_cart = ShoppingCartRecipe.objects.filter(
             user=request.user,
             recipe=recipe
@@ -132,17 +132,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
             recipeingredient__recipe__in_shopping_cart_of=request.user
         ).annotate(total_amount=Sum(
             'recipeingredient__amount')).order_by('name')
-        serializer = ShoppingCartSerializer(
-            ingredients,
-            many=True,
-            context={'request': request}
-        )
+
+        with open('shopping_cart.txt', 'w') as file:
+            n = 0
+            for ingredient in ingredients:
+                n += 1
+                file.write(
+                    f'{n}. {ingredient.name} - {ingredient.total_amount}'
+                    f', {ingredient.measurement_unit}')
+                file.write('\n')
+        file = open('shopping_cart.txt', 'r')
+
         return HttpResponse(
-            serializer.data,
+            file.read(),
             headers={
-                'Content-Type': 'application/pdf',
+                'Content-Type': 'application/vnd.txt',
                 'Content-Disposition': (
-                    'attachment; filename="shopping_cart.pdf"'
+                    'attachment; filename="shopping_cart.txt"'
                 ),
             },
             status=status.HTTP_200_OK

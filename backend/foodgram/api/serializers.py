@@ -10,7 +10,7 @@ from rest_framework import serializers
 from users.models import User
 from users.serializers import UserSerializer
 
-from .pagination import POSTS_PER_PAGE
+from .pagination import RECIPES_PER_PAGE
 
 logger = settings.logging.getLogger(__name__)
 
@@ -70,16 +70,6 @@ class RecipeAuthorSerializer(UserSerializer):
             'last_name',
             'is_subscribed'
         )
-
-
-# class TagRecipeSerializer(serializers.ModelSerializer):
-#     """Сериализатор для вложенного поля tags при создании рецепта."""
-#     id = serializers.ChoiceField(
-#         choices=Tag.objects.values_list('id', flat=True))
-
-#     class Meta:
-#         model = Tag
-#         fields = ('id', )
 
 
 class IngredientRecipeCreateSerializer(serializers.ModelSerializer):
@@ -291,7 +281,7 @@ class SubscriptionSerializer(UserSerializer):
 
         page_size = self.context.get(
             'request').query_params.get(
-            'recipes_limit') or POSTS_PER_PAGE
+            'recipes_limit') or RECIPES_PER_PAGE
         paginator = Paginator(obj.recipes.all(), page_size)
         page = self.context['request'].query_params.get('page') or 1
         recipes = paginator.page(page)
@@ -302,18 +292,4 @@ class SubscriptionSerializer(UserSerializer):
     def get_recipes_count(self, obj):
         """Метод для вычисления поля recipes_count."""
 
-        return obj.recipes_count()
-
-
-class ShoppingCartSerializer(serializers.ModelSerializer):
-    """Сериализатор для ингредиентов."""
-    total_amount = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Ingredient
-        fields = ('name', 'measurement_unit', 'total_amount')
-
-    def get_total_amount(self, obj):
-        """Поле для общего количества ингредиентов в списке покупок."""
-
-        return obj.total_amount
+        return obj.recipes_count
