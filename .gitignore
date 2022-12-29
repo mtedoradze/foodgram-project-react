@@ -134,3 +134,4 @@ dmypy.json
 # Data
 foodgram_data
 static_value
+media_value

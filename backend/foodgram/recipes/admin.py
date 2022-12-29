@@ -5,7 +5,11 @@ from .models import Ingredient, Recipe, Tag
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'author', 'count_favorited_by')
+    list_display = (
+        'name',
+        'author',
+        'count_favorited_by'
+    )
     list_filter = ('author', 'name', 'tags')
 
     @admin.display()

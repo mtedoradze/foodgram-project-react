@@ -1,3 +1,4 @@
+from api.filters import RecipeFilter
 from api.pagination import StandardResultsSetPagination
 from api.permissions import SubscriptionOwnerPermission
 from api.serializers import SubscriptionSerializer
@@ -24,6 +25,7 @@ class CustomUserSubscriptionViewSet(UserViewSet):
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     queryset = User.objects.all()
     pagination_class = StandardResultsSetPagination
+    filterset_class = RecipeFilter
 
     def get_permissions(self):
         """Определение условий для применения пермишенов."""
