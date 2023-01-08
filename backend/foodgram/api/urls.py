@@ -13,6 +13,6 @@ router.register(r'tags', TagViewSet)
 router.register('users', CustomUserSubscriptionViewSet, basename='users')
 
 urlpatterns = [
-    path('auth/', include('djoser.urls.authtoken')),
     path('', include(router.urls)),
+    path('auth/', include('djoser.urls.authtoken')),
 ]

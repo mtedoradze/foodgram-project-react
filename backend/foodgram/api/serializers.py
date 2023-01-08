@@ -2,7 +2,6 @@ import base64
 
 import webcolors
 from django.core.files.base import ContentFile
-from django.core.paginator import Paginator
 from django.db import transaction
 from foodgram import settings
 from recipes.models import Ingredient, Recipe, RecipeIngredient, RecipeTag, Tag
@@ -260,7 +259,7 @@ class FavoriteRecipeSerializer(RecipeSerializer):
 class SubscriptionSerializer(UserSerializer):
     """Сериализатор для подписок на авторов рецептов."""
 
-    recipes = serializers.SerializerMethodField('paginated_recipes')
+    recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -276,15 +275,12 @@ class SubscriptionSerializer(UserSerializer):
             'recipes_count'
         )
 
-    def paginated_recipes(self, obj):
+    def get_recipes(self, obj):
         """Метод для ограничения количества объектов внутри поля recipes."""
 
-        page_size = self.context.get(
-            'request').query_params.get(
-            'recipes_limit') or RECIPES_PER_PAGE
-        paginator = Paginator(obj.recipes.all(), page_size)
-        page = self.context['request'].query_params.get('page') or 1
-        recipes = paginator.page(page)
+        request = self.context.get('request')
+        recipes_limit = request.GET.get('recipes_limit') or RECIPES_PER_PAGE
+        recipes = obj.recipes.all()[:int(recipes_limit)]
         serializer = FavoriteRecipeSerializer(recipes, many=True)
 
         return serializer.data

@@ -1,6 +1,5 @@
-from django.db.models import Q
 from django_filters.rest_framework import FilterSet, filters
-from recipes.models import Recipe
+from recipes.models import Recipe, Tag
 
 
 class RecipeFilter(FilterSet):
@@ -13,9 +12,9 @@ class RecipeFilter(FilterSet):
         field_name='in_shopping_cart_of',
         method='filter_is_in_shopping_cart'
     )
-    tags = filters.CharFilter(
+    tags = filters.MultipleChoiceFilter(
         field_name='tags__slug',
-        lookup_expr='icontains',
+        choices=Tag.objects.values_list('slug', 'slug')
     )
     author = filters.NumberFilter(
         field_name='author__id'

@@ -21,7 +21,7 @@ const Subscription = ({ email, first_name, last_name, username, removeSubscripti
     </div>
     <div className={styles.subscriptionBody}>
       <ul className={styles.subscriptionItems}>
-        {recipes.map(recipe => {
+        {recipes && recipes.map(recipe => {
           return <li className={styles.subscriptionItem} key={recipe.id}>
             <LinkComponent className={styles.subscriptionRecipeLink} href={`/recipes/${recipe.id}`} title={
               <div className={styles.subscriptionRecipe}>

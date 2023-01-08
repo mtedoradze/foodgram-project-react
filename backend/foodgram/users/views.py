@@ -5,6 +5,7 @@ from api.serializers import SubscriptionSerializer
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
+from foodgram import settings
 from recipes.models import Subscription
 from rest_framework import permissions, status
 from rest_framework.decorators import action
@@ -12,6 +13,8 @@ from rest_framework.response import Response
 
 from .models import User
 from .serializers import CustomUserCreateSerializer, UserSerializer
+
+logger = settings.logging.getLogger(__name__)
 
 
 class CustomUserSubscriptionViewSet(UserViewSet):
@@ -22,7 +25,6 @@ class CustomUserSubscriptionViewSet(UserViewSet):
     """
 
     serializer_class = UserSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     queryset = User.objects.all()
     pagination_class = StandardResultsSetPagination
     filterset_class = RecipeFilter
@@ -32,7 +34,9 @@ class CustomUserSubscriptionViewSet(UserViewSet):
 
         return (
             (SubscriptionOwnerPermission(), ) if 'subscriptions'
-            in self.request.path else super().get_permissions()
+            in self.request.path else (
+                permissions.IsAuthenticatedOrReadOnly(),
+            )
         )
 
     def get_serializer_class(self):
@@ -109,13 +113,20 @@ class CustomUserSubscriptionViewSet(UserViewSet):
 
         subscriptions = User.objects.filter(
             subscriptions__user__id=request.user.id
-        ).annotate(recipes_count=Count('recipes__id'))
+        ).annotate(recipes_count=Count('recipes'))
 
-        serializer = SubscriptionSerializer(
-            subscriptions,
-            many=True,
-            context={'request': request}
-        )
+        page = self.paginate_queryset(subscriptions)
+        if page is not None:
+            serializer = SubscriptionSerializer(
+                page,
+                context={'request': request},
+                many=True
+            )
+            return self.get_paginated_response(
+                serializer.data
+            )
+        serializer = self.get_serializer(subscriptions, many=True)
+
         return Response(
             serializer.data,
             status=status.HTTP_200_OK

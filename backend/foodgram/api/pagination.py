@@ -9,4 +9,3 @@ class StandardResultsSetPagination(PageNumberPagination):
     page_size = RECIPES_PER_PAGE
     page_query_param = 'page'
     page_size_query_param = 'limit'
-    # max_page_size = MAX_PAGE_SIZE

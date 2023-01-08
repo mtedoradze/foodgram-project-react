@@ -33,7 +33,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         DjangoFilterBackend,
         filters.SearchFilter
     ]
-    search_fields = ('name', 'ingredients__name')
+    search_fields = ('name',)
 
     def get_serializer_class(self):
         """
@@ -96,7 +96,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Добавление рецепта в список покупок/удаление из списка покупок."""
 
         recipe = get_object_or_404(Recipe, pk=pk)
-        print(recipe._meta.get_fields())
         recipe_in_shopping_cart = ShoppingCartRecipe.objects.filter(
             user=request.user,
             recipe=recipe
@@ -165,10 +164,13 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Получение ингредиента, получение списка ингредиентов.
-    Поиск частичному вхождению в начале названия ингредиента.
+    Поиск по частичному вхождению в начале названия ингредиента.
     """
 
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     filter_backends = (DjangoFilterBackend, filters.SearchFilter)
-    search_fields = ('name',)
+
+    def get_queryset(self):
+        search_params = self.request.GET.get('name')
+        return Ingredient.objects.filter(name__istartswith=search_params)
