@@ -1,4 +1,4 @@
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from users.models import User
 
@@ -111,9 +111,10 @@ class RecipeIngredient(models.Model):
 
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
-    amount = models.IntegerField(
+    amount = models.PositiveIntegerField(
         verbose_name='Количество',
-        null=True
+        null=True,
+        validators=[MaxValueValidator(10000), ]
     )
 
     class Meta:

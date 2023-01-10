@@ -132,6 +132,10 @@ dmypy.json
 .idea
 
 # Data
-foodgram_data
-static_value
-media_value
+foodgram_data/
+static_value/
+media_value/
+recipes.json
+
+#IDE settings
+.vscode

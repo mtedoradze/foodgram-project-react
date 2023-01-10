@@ -1,6 +1,7 @@
 import base64
 
 import webcolors
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import transaction
 from foodgram import settings
@@ -81,6 +82,11 @@ class IngredientRecipeCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = RecipeIngredient
         fields = ('id', 'amount')
+
+    def validate_amount(self, value):
+        if value == 0:
+            raise ValidationError('Количество должно быть больше 0.')
+        return value
 
 
 class IngredientRecipeSerializer(serializers.ModelSerializer):
@@ -279,7 +285,9 @@ class SubscriptionSerializer(UserSerializer):
         """Метод для ограничения количества объектов внутри поля recipes."""
 
         request = self.context.get('request')
-        recipes_limit = request.GET.get('recipes_limit') or RECIPES_PER_PAGE
+        recipes_limit = request.query_params.get(
+            'recipes_limit'
+        ) or RECIPES_PER_PAGE
         recipes = obj.recipes.all()[:int(recipes_limit)]
         serializer = FavoriteRecipeSerializer(recipes, many=True)
 

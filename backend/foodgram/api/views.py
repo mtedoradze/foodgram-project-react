@@ -59,7 +59,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def validate(self, data):
         try:
             super().validate(data)
-        except IntegrityError as error:
+        except Exception as error:
             return Response(serializers.ValidationError(error))
 
     @action(methods=['post', 'delete'], detail=True)
